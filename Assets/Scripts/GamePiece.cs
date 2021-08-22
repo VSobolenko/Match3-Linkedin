@@ -73,6 +73,21 @@ public class GamePiece : MonoBehaviour
         _type = type;
     }
 
+    private void OnMouseDown()
+    {
+        _grids.EnterPiece(this);
+    }
+
+    private void OnMouseEnter()
+    {
+        _grids.PressPiece(this);
+    }
+
+    private void OnMouseUp()
+    {
+        _grids.ReleasePiece();
+    }
+
     public bool IsMovable()
     {
         return movableComponent != null;
