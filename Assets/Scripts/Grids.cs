@@ -59,12 +59,12 @@ public class Grids : MonoBehaviour
         {
             for (int y = 0; y < yDim; y++)
             {
-                SpawnNewPIece(x, y, PieceType.EMPTY);
+                SpawnNewPiece(x, y, PieceType.EMPTY);
             }
         }
 
         Destroy(pieces[4, 4].gameObject);
-        SpawnNewPIece(4, 4, PieceType.BUBBLE);
+        SpawnNewPiece(4, 4, PieceType.BUBBLE);
         StartCoroutine(Fill());
     }
 
@@ -106,7 +106,7 @@ public class Grids : MonoBehaviour
                         Destroy(pieceBelow.gameObject);
                         piece.MovableComponent.Move(x, y + 1, fillTime);
                         pieces[x, y + 1] = piece;
-                        SpawnNewPIece(x, y, PieceType.EMPTY);
+                        SpawnNewPiece(x, y, PieceType.EMPTY);
                         movedPiece = true;
                     }
                     else
@@ -149,7 +149,7 @@ public class Grids : MonoBehaviour
                                             Destroy(diagonalPice.gameObject);
                                             piece.MovableComponent.Move(diagX, y + 1, fillTime);
                                             pieces[diagX, y + 1] = piece;
-                                            SpawnNewPIece(x, y, PieceType.EMPTY);
+                                            SpawnNewPiece(x, y, PieceType.EMPTY);
                                             movedPiece = true;
                                             break;
                                         }
@@ -186,7 +186,7 @@ public class Grids : MonoBehaviour
             transform.position.y + yDim / 2.0f - y);
     }
 
-    public GamePiece SpawnNewPIece(int x, int y, PieceType type)
+    public GamePiece SpawnNewPiece(int x, int y, PieceType type)
     {
         GameObject newPiece = Instantiate(piecePrefabDict[type], GetWorldPosition(x, y), Quaternion.identity);
         newPiece.transform.parent = transform;
@@ -490,11 +490,27 @@ public class Grids : MonoBehaviour
         if(pieces[x, y].IsClearable() && !pieces[x, y].ClearableComponent.IsBeingCleared)
         {
             pieces[x, y].ClearableComponent.Clear();
-            SpawnNewPIece(x, y, PieceType.EMPTY);
+            SpawnNewPiece(x, y, PieceType.EMPTY);
+            ClearObstacles(x, y);
 
             return true;
         }
 
         return false;
+    }
+
+    public void ClearObstacles(int x, int y)
+    {
+        for(int adjacentX = x -1; adjacentX <= x + 1; adjacentX++)
+        {
+            if(adjacentX != x && adjacentX >= 0 && adjacentX < xDim)
+            {
+                if(pieces[adjacentX, y].Type == PieceType.BUBBLE && pieces[adjacentX, y].IsClearable())
+                {
+                    pieces[adjacentX, y].ClearableComponent.Clear();
+                    SpawnNewPiece(adjacentX, y, PieceType.EMPTY);
+                }
+            }
+        }
     }
 }
