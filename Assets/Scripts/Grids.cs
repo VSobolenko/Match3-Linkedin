@@ -202,11 +202,18 @@ public class Grids : MonoBehaviour
             pieces[piece1.X, piece1.Y] = piece2;
             pieces[piece2.X, piece2.Y] = piece1;
 
-            int piece1X = piece1.X;
-            int piece1Y = piece1.Y;
+            if(GetMatch(piece1, piece2.X, piece2.Y) != null|| GetMatch(piece2, piece1.X, piece1.Y) != null)
+            {
+                int piece1X = piece1.X;
+                int piece1Y = piece1.Y;
 
-            piece1.MovableComponent.Move(piece2.X, piece2.Y, fillTime);
-            piece2.MovableComponent.Move(piece1X, piece1Y, fillTime);
+                piece1.MovableComponent.Move(piece2.X, piece2.Y, fillTime);
+                piece2.MovableComponent.Move(piece1X, piece1Y, fillTime);
+            }
+            else
+            {
+
+            }
         }
     }
 
@@ -226,5 +233,109 @@ public class Grids : MonoBehaviour
         {
             SwapPeces(pressedPiece, enteredPiece);
         }
+    }
+
+    public List<GamePiece> GetMatch(GamePiece piece, int newX, int newY)
+    {
+        if (piece.IsColored())
+        {
+            ColorPiece.ColorType color = piece.ColorComponent.Color;
+            List<GamePiece> horizontalPieces = new List<GamePiece>();
+            List<GamePiece> verticalPieces = new List<GamePiece>();
+            List<GamePiece> matchingPieces = new List<GamePiece>();
+
+            // Horizontal
+            horizontalPieces.Add(piece);
+
+            for(int dir = 0; dir <= 1; dir++)
+            {
+                for(int xOffse = 1; xOffse < xDim; xOffse++)
+                {
+                    int x;
+
+                    if(dir == 0)
+                    {
+                        x = newX - xOffse;
+                    }
+                    else
+                    {
+                        x = newX + xOffse;
+                    }
+
+                    if(x <0 || x >= xDim)
+                    {
+                        break;
+                    }
+
+                    if(pieces[x, newY].IsColored() && pieces[x, newY].ColorComponent.Color == color)
+                    {
+                        horizontalPieces.Add(pieces[x, newY]);
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+
+            if(horizontalPieces.Count >= 3)
+            {
+                for(int i =0; i < horizontalPieces.Count; i++)
+                {
+                    matchingPieces.Add(horizontalPieces[i]);
+                }
+            }
+            if(matchingPieces.Count >= 3)
+            {
+                return matchingPieces;
+            }
+
+            // Vertical
+            verticalPieces.Add(piece);
+
+            for (int dir = 0; dir <= 1; dir++)
+            {
+                for (int yOffse = 1; yOffse < xDim; yOffse++)
+                {
+                    int y;
+
+                    if (dir == 0)
+                    {
+                        y = newX - yOffse;
+                    }
+                    else
+                    {
+                        y = newX + yOffse;
+                    }
+
+                    if (y < 0 || y >= xDim)
+                    {
+                        break;
+                    }
+
+                    if (pieces[newX, y].IsColored() && pieces[newX, y].ColorComponent.Color == color)
+                    {
+                        verticalPieces.Add(pieces[newX, y]);
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+            }
+
+            if (verticalPieces.Count >= 3)
+            {
+                for (int i = 0; i < verticalPieces.Count; i++)
+                {
+                    matchingPieces.Add(verticalPieces[i]);
+                }
+            }
+            if (matchingPieces.Count >= 3)
+            {
+                return matchingPieces;
+            }
+        }
+        return null;
     }
 }
