@@ -30,6 +30,10 @@ public class Grids : MonoBehaviour
     private GamePiece[,] pieces;
 
     private bool inverse = false;
+
+    private GamePiece pressedPiece;
+    private GamePiece enteredPiece;
+
     private void Start()
     {
         piecePrefabDict = new Dictionary<PieceType, GameObject>();
@@ -55,22 +59,30 @@ public class Grids : MonoBehaviour
         {
             for (int y = 0; y < yDim; y++)
             {
-                SpawnNewPIece(x, y, PieceType.EMPTY);
+                SpawnNewPiece(x, y, PieceType.EMPTY);
             }
         }
 
         Destroy(pieces[4, 4].gameObject);
-        SpawnNewPIece(4, 4, PieceType.BUBBLE);
+        SpawnNewPiece(4, 4, PieceType.BUBBLE);
         StartCoroutine(Fill());
     }
 
     public IEnumerator Fill()
     {
-        while (FillStep())
+        bool needsRefill = true;
+
+        while (needsRefill)
         {
-            inverse = !inverse;
             yield return new WaitForSeconds(fillTime);
+            while (FillStep())
+            {
+                inverse = !inverse;
+                yield return new WaitForSeconds(fillTime);
+            }
+            needsRefill = ClearAllValidMatches();
         }
+        
     }
 
     public bool FillStep()
@@ -94,7 +106,7 @@ public class Grids : MonoBehaviour
                         Destroy(pieceBelow.gameObject);
                         piece.MovableComponent.Move(x, y + 1, fillTime);
                         pieces[x, y + 1] = piece;
-                        SpawnNewPIece(x, y, PieceType.EMPTY);
+                        SpawnNewPiece(x, y, PieceType.EMPTY);
                         movedPiece = true;
                     }
                     else
@@ -137,7 +149,7 @@ public class Grids : MonoBehaviour
                                             Destroy(diagonalPice.gameObject);
                                             piece.MovableComponent.Move(diagX, y + 1, fillTime);
                                             pieces[diagX, y + 1] = piece;
-                                            SpawnNewPIece(x, y, PieceType.EMPTY);
+                                            SpawnNewPiece(x, y, PieceType.EMPTY);
                                             movedPiece = true;
                                             break;
                                         }
@@ -174,7 +186,7 @@ public class Grids : MonoBehaviour
             transform.position.y + yDim / 2.0f - y);
     }
 
-    public GamePiece SpawnNewPIece(int x, int y, PieceType type)
+    public GamePiece SpawnNewPiece(int x, int y, PieceType type)
     {
         GameObject newPiece = Instantiate(piecePrefabDict[type], GetWorldPosition(x, y), Quaternion.identity);
         newPiece.transform.parent = transform;
@@ -183,5 +195,322 @@ public class Grids : MonoBehaviour
         pieces[x, y].Init(x, y, this, type);
 
         return pieces[x, y];
+    }
+
+    public bool IsAdjacent(GamePiece piece1, GamePiece piece2)
+    {
+        return (piece1.X == piece2.X && (int)Mathf.Abs(piece1.Y - piece2.Y) == 1)
+            || (piece1.Y == piece2.Y && (int)Mathf.Abs(piece1.X - piece2.X) == 1);
+    }
+
+    public void SwapPeces(GamePiece piece1, GamePiece piece2)
+    {
+        if (piece1.IsMovable() && piece2.IsMovable())
+        {
+            pieces[piece1.X, piece1.Y] = piece2;
+            pieces[piece2.X, piece2.Y] = piece1;
+
+            if (GetMatch(piece1, piece2.X, piece2.Y) != null || GetMatch(piece2, piece1.X, piece1.Y) != null)
+            {
+                int piece1X = piece1.X;
+                int piece1Y = piece1.Y;
+
+                piece1.MovableComponent.Move(piece2.X, piece2.Y, fillTime);
+                piece2.MovableComponent.Move(piece1X, piece1Y, fillTime);
+
+                ClearAllValidMatches();
+
+                StartCoroutine(Fill());
+            }
+            else
+            {
+
+            }
+        }
+    }
+
+    public void PressPiece(GamePiece piece)
+    {
+        pressedPiece = piece;
+    }
+
+    public void EnterPiece(GamePiece piece)
+    {
+        enteredPiece = piece;
+    }
+
+    public void ReleasePiece()
+    {
+        if (IsAdjacent(pressedPiece, enteredPiece))
+        {
+            SwapPeces(pressedPiece, enteredPiece);
+        }
+    }
+
+    private List<GamePiece> GetMatch(GamePiece piece, int newX, int newY)
+    {
+        if (!piece.IsColored()) return null;
+        var color = piece.ColorComponent.Color;
+        var horizontalPieces = new List<GamePiece>();
+        var verticalPieces = new List<GamePiece>();
+        var matchingPieces = new List<GamePiece>();
+
+        // First check horizontal
+        horizontalPieces.Add(piece);
+
+        for (int dir = 0; dir <= 1; dir++)
+        {
+            for (int xOffset = 1; xOffset < xDim; xOffset++)
+            {
+                int x;
+
+                if (dir == 0)
+                { // Left
+                    x = newX - xOffset;
+                }
+                else
+                { // right
+                    x = newX + xOffset;
+                }
+
+                // out-of-bounds
+                if (x < 0 || x >= xDim) { break; }
+
+                // piece is the same color?
+                if (pieces[x, newY].IsColored() && pieces[x, newY].ColorComponent.Color == color)
+                {
+                    horizontalPieces.Add(pieces[x, newY]);
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+
+        if (horizontalPieces.Count >= 3)
+        {
+            for (int i = 0; i < horizontalPieces.Count; i++)
+            {
+                matchingPieces.Add(horizontalPieces[i]);
+            }
+        }
+
+        // Traverse vertically if we found a match (for L and T shape)
+        if (horizontalPieces.Count >= 3)
+        {
+            for (int i = 0; i < horizontalPieces.Count; i++)
+            {
+                for (int dir = 0; dir <= 1; dir++)
+                {
+                    for (int yOffset = 1; yOffset < yDim; yOffset++)
+                    {
+                        int y;
+
+                        if (dir == 0)
+                        { // Up
+                            y = newY - yOffset;
+                        }
+                        else
+                        { // Down
+                            y = newY + yOffset;
+                        }
+
+                        if (y < 0 || y >= yDim)
+                        {
+                            break;
+                        }
+
+                        if (pieces[horizontalPieces[i].X, y].IsColored() && pieces[horizontalPieces[i].X, y].ColorComponent.Color == color)
+                        {
+                            verticalPieces.Add(pieces[horizontalPieces[i].X, y]);
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                if (verticalPieces.Count < 2)
+                {
+                    verticalPieces.Clear();
+                }
+                else
+                {
+                    for (int j = 0; j < verticalPieces.Count; j++)
+                    {
+                        matchingPieces.Add(verticalPieces[j]);
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (matchingPieces.Count >= 3)
+        {
+            return matchingPieces;
+        }
+
+
+        // Didn't find anything going horizontally first,
+        // so now check vertically
+        horizontalPieces.Clear();
+        verticalPieces.Clear();
+        verticalPieces.Add(piece);
+
+        for (int dir = 0; dir <= 1; dir++)
+        {
+            for (int yOffset = 1; yOffset < xDim; yOffset++)
+            {
+                int y;
+
+                if (dir == 0)
+                { // Up
+                    y = newY - yOffset;
+                }
+                else
+                { // Down
+                    y = newY + yOffset;
+                }
+
+                // out-of-bounds
+                if (y < 0 || y >= yDim) { break; }
+
+                // piece is the same color?
+                if (pieces[newX, y].IsColored() && pieces[newX, y].ColorComponent.Color == color)
+                {
+                    verticalPieces.Add(pieces[newX, y]);
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+
+        if (verticalPieces.Count >= 3)
+        {
+            for (int i = 0; i < verticalPieces.Count; i++)
+            {
+                matchingPieces.Add(verticalPieces[i]);
+            }
+        }
+
+        // Traverse horizontally if we found a match (for L and T shape)
+        if (verticalPieces.Count >= 3)
+        {
+            for (int i = 0; i < verticalPieces.Count; i++)
+            {
+                for (int dir = 0; dir <= 1; dir++)
+                {
+                    for (int xOffset = 1; xOffset < yDim; xOffset++)
+                    {
+                        int x;
+
+                        if (dir == 0)
+                        { // Left
+                            x = newX - xOffset;
+                        }
+                        else
+                        { // Right
+                            x = newX + xOffset;
+                        }
+
+                        if (x < 0 || x >= xDim)
+                        {
+                            break;
+                        }
+
+                        if (pieces[x, verticalPieces[i].Y].IsColored() && pieces[x, verticalPieces[i].Y].ColorComponent.Color == color)
+                        {
+                            horizontalPieces.Add(pieces[x, verticalPieces[i].Y]);
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                if (horizontalPieces.Count < 2)
+                {
+                    horizontalPieces.Clear();
+                }
+                else
+                {
+                    for (int j = 0; j < horizontalPieces.Count; j++)
+                    {
+                        matchingPieces.Add(horizontalPieces[j]);
+                    }
+                    break;
+                }
+            }
+        }
+
+        if (matchingPieces.Count >= 3)
+        {
+            return matchingPieces;
+        }
+
+        return null;
+    }
+
+    public bool ClearAllValidMatches()
+    {
+        bool needsRefill = false;
+
+        for(int y =0; y < yDim; y++)
+        {
+            for(int x = 0; x < xDim; x++)
+            {
+                if(pieces[x, y].IsClearable())
+                {
+                    List<GamePiece> match = GetMatch(pieces[x, y], x, y);
+
+                    if(match != null)
+                    {
+                        for(int i =0; i< match.Count; i++)
+                        {
+                            if(ClearPiece(match[i].X, match[i].Y))
+                            {
+                                needsRefill = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        return needsRefill;
+    }
+
+    public bool ClearPiece(int x, int y)
+    {
+        if(pieces[x, y].IsClearable() && !pieces[x, y].ClearableComponent.IsBeingCleared)
+        {
+            pieces[x, y].ClearableComponent.Clear();
+            SpawnNewPiece(x, y, PieceType.EMPTY);
+            ClearObstacles(x, y);
+
+            return true;
+        }
+
+        return false;
+    }
+
+    public void ClearObstacles(int x, int y)
+    {
+        for(int adjacentX = x -1; adjacentX <= x + 1; adjacentX++)
+        {
+            if(adjacentX != x && adjacentX >= 0 && adjacentX < xDim)
+            {
+                if(pieces[adjacentX, y].Type == PieceType.BUBBLE && pieces[adjacentX, y].IsClearable())
+                {
+                    pieces[adjacentX, y].ClearableComponent.Clear();
+                    SpawnNewPiece(adjacentX, y, PieceType.EMPTY);
+                }
+            }
+        }
     }
 }
