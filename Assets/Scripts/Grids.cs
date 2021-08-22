@@ -197,12 +197,12 @@ public class Grids : MonoBehaviour
 
     public void SwapPeces(GamePiece piece1, GamePiece piece2)
     {
-        if(piece1.IsMovable() && piece2.IsMovable())
+        if (piece1.IsMovable() && piece2.IsMovable())
         {
             pieces[piece1.X, piece1.Y] = piece2;
             pieces[piece2.X, piece2.Y] = piece1;
 
-            if(GetMatch(piece1, piece2.X, piece2.Y) != null|| GetMatch(piece2, piece1.X, piece1.Y) != null)
+            if (GetMatch(piece1, piece2.X, piece2.Y) != null || GetMatch(piece2, piece1.X, piece1.Y) != null)
             {
                 int piece1X = piece1.X;
                 int piece1Y = piece1.Y;
@@ -229,7 +229,7 @@ public class Grids : MonoBehaviour
 
     public void ReleasePiece()
     {
-        if(IsAdjacent(pressedPiece, enteredPiece))
+        if (IsAdjacent(pressedPiece, enteredPiece))
         {
             SwapPeces(pressedPiece, enteredPiece);
         }
@@ -247,13 +247,13 @@ public class Grids : MonoBehaviour
             // Horizontal
             horizontalPieces.Add(piece);
 
-            for(int dir = 0; dir <= 1; dir++)
+            for (int dir = 0; dir <= 1; dir++)
             {
-                for(int xOffse = 1; xOffse < xDim; xOffse++)
+                for (int xOffse = 1; xOffse < xDim; xOffse++)
                 {
                     int x;
 
-                    if(dir == 0)
+                    if (dir == 0)
                     {
                         x = newX - xOffse;
                     }
@@ -262,12 +262,12 @@ public class Grids : MonoBehaviour
                         x = newX + xOffse;
                     }
 
-                    if(x <0 || x >= xDim)
+                    if (x < 0 || x >= xDim)
                     {
                         break;
                     }
 
-                    if(pieces[x, newY].IsColored() && pieces[x, newY].ColorComponent.Color == color)
+                    if (pieces[x, newY].IsColored() && pieces[x, newY].ColorComponent.Color == color)
                     {
                         horizontalPieces.Add(pieces[x, newY]);
                     }
@@ -278,34 +278,84 @@ public class Grids : MonoBehaviour
                 }
             }
 
-            if(horizontalPieces.Count >= 3)
+            if (horizontalPieces.Count >= 3)
             {
-                for(int i =0; i < horizontalPieces.Count; i++)
+                for (int i = 0; i < horizontalPieces.Count; i++)
                 {
                     matchingPieces.Add(horizontalPieces[i]);
                 }
             }
-            if(matchingPieces.Count >= 3)
+            if (horizontalPieces.Count >= 3)
+            {
+                for (int i = 0; i < horizontalPieces.Count; i++)
+                {
+                    for (int dir = 0; dir <= 1; dir++)
+                    {
+                        for (int yOffset = 1; yOffset < yDim; yOffset++)
+                        {
+                            int y;
+
+                            if (dir == 0)
+                            {
+                                y = newY - yOffset;
+                            }
+                            else
+                            {
+                                y = newY + yOffset;
+                            }
+
+                            if (y < 0 || y >= xDim)
+                            {
+                                break;
+                            }
+
+                            if (pieces[horizontalPieces[i].X, y].IsColored() && pieces[horizontalPieces[i].X, y].ColorComponent.Color == color)
+                            {
+                                verticalPieces.Add(pieces[horizontalPieces[i].X, y]);
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                    }
+                    if (verticalPieces.Count < 2)
+                    {
+                        verticalPieces.Clear();
+                    }
+                    else
+                    {
+                        for (int j = 0; j < verticalPieces.Count; j++)
+                        {
+                            matchingPieces.Add(verticalPieces[j]);
+                        }
+                        break;
+                    }
+                }
+            }
+            if (matchingPieces.Count >= 3)
             {
                 return matchingPieces;
             }
 
             // Vertical
+            horizontalPieces.Clear();
+            verticalPieces.Clear();
             verticalPieces.Add(piece);
 
             for (int dir = 0; dir <= 1; dir++)
             {
-                for (int yOffse = 1; yOffse < xDim; yOffse++)
+                for (int yOffset = 1; yOffset < xDim; yOffset++)
                 {
                     int y;
 
                     if (dir == 0)
                     {
-                        y = newX - yOffse;
+                        y = newX - yOffset;
                     }
                     else
                     {
-                        y = newX + yOffse;
+                        y = newX + yOffset;
                     }
 
                     if (y < 0 || y >= xDim)
@@ -329,6 +379,55 @@ public class Grids : MonoBehaviour
                 for (int i = 0; i < verticalPieces.Count; i++)
                 {
                     matchingPieces.Add(verticalPieces[i]);
+                }
+            }
+
+            if (verticalPieces.Count >= 3)
+            {
+                for (int i = 0; i < verticalPieces.Count; i++)
+                {
+                    for (int dir = 0; dir <= 1; dir++)
+                    {
+                        for (int xOffset = 1; xOffset < yDim; xOffset++)
+                        {
+                            int x;
+
+                            if (dir == 0)
+                            {
+                                x = newY - xOffset;
+                            }
+                            else
+                            {
+                                x = newY + xOffset;
+                            }
+
+                            if (x < 0 || x >= xDim)
+                            {
+                                break;
+                            }
+
+                            if (pieces[x, verticalPieces[i].Y].IsColored() && pieces[x, verticalPieces[i].Y].ColorComponent.Color == color)
+                            {
+                                verticalPieces.Add(pieces[x, verticalPieces[i].Y]);
+                            }
+                            else
+                            {
+                                break;
+                            }
+                        }
+                    }
+                    if (horizontalPieces.Count < 2)
+                    {
+                        horizontalPieces.Clear();
+                    }
+                    else
+                    {
+                        for (int j = 0; j < horizontalPieces.Count; j++)
+                        {
+                            matchingPieces.Add(horizontalPieces[j]);
+                        }
+                        break;
+                    }
                 }
             }
             if (matchingPieces.Count >= 3)
